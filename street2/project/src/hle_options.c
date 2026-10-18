@@ -115,10 +115,15 @@ static wchar_t s_ini[MAX_PATH];
 static int s_use_ini = 1;
 
 /* "21:9" is what ultrawide monitors really are: 3440x1440, 43:18. */
-static const wchar_t *const k_aspect_name[] = { L"4:3 (original)", L"16:9", L"16:10", L"21:9 (ultrawide)", L"32:9" };
-static const char *const k_aspect_env[] = { "", "16:9", "16:10", "43:18", "32:9" };
-static const float k_aspect_value[] = { 4.0f / 3.0f, 16.0f / 9.0f, 1.6f, 43.0f / 18.0f, 32.0f / 9.0f };
-#define N_ASPECT 5
+static const wchar_t *const k_aspect_name[] = { L"4:3 (original)", L"16:9", L"16:10", L"21:9 (ultrawide)", L"32:9",
+                                                L"21:9 hor+" };
+static const char *const k_aspect_env[] = { "", "16:9", "16:10", "43:18", "32:9", "43:18" };
+static const float k_aspect_value[] = { 4.0f / 3.0f, 16.0f / 9.0f, 1.6f, 43.0f / 18.0f, 32.0f / 9.0f, 43.0f / 18.0f };
+/* The game's widescreen TV setting: its 16:9 camera, shown with bars on wider
+ * shapes. "21:9 hor+" leaves it off, so the 4:3 camera is widened to the whole
+ * 21:9 picture (HUD centred, scenery to the edges). */
+static const int k_aspect_widescreen[] = { 0, 1, 1, 1, 1, 0 };
+#define N_ASPECT 6
 /* Internal resolution presets: lines drawn (the game is 480) and the aspect
  * the preset implies (-1: the monitor's). Picking one also sets the aspect;
  * the aspect item can still change it afterwards. */
@@ -222,7 +227,7 @@ static void env_publish(void)
     char b[16];
     scale_publish();
     _putenv_s("RECOMP_HLE_ASPECT", k_aspect_env[g_opt.aspect]);
-    _putenv_s("RECOMP_XBOX_WIDESCREEN", g_opt.aspect ? "1" : "0");
+    _putenv_s("RECOMP_XBOX_WIDESCREEN", k_aspect_widescreen[g_opt.aspect] ? "1" : "0");
     snprintf(b, sizeof b, "%d", g_opt.language);
     _putenv_s("RECOMP_LANGUAGE", b);
     if (g_opt.adapter >= 0)
@@ -293,6 +298,9 @@ void hle_options_init(void)
         for (i = 1; i < N_ASPECT; i++)
             if (a > 1.0f && fabsf(k_aspect_value[i] - a) < fabsf(k_aspect_value[best] - a))
                 best = i;
+        e = getenv("RECOMP_XBOX_WIDESCREEN");
+        if (best == 3 && e && *e == '0')
+            best = 5;                           /* 21:9 with the game's widescreen off: hor+ */
         g_opt.aspect = best;
     } else if (g_opt.aspect) {
         _putenv_s("RECOMP_HLE_ASPECT", k_aspect_env[g_opt.aspect]);
@@ -302,7 +310,7 @@ void hle_options_init(void)
      * RECOMP_XBOX_WIDESCREEN (0 = the old stretched view) wins. */
     e = getenv("RECOMP_XBOX_WIDESCREEN");
     if (!(e && *e))
-        _putenv_s("RECOMP_XBOX_WIDESCREEN", g_opt.aspect ? "1" : "0");
+        _putenv_s("RECOMP_XBOX_WIDESCREEN", k_aspect_widescreen[g_opt.aspect] ? "1" : "0");
     s_boot = g_opt;
     fprintf(stderr, "[OPTIONS] %ls%s: display %d, monitor %d, %d Hz, vsync %d, fps %d, scale %d, aspect %d, "
             "fxaa %d, aniso %d, api %d, gpu %d, language %d, volume %d\n",
@@ -1446,7 +1454,7 @@ static const wchar_t *item_help(int it)
     case IT_VSYNC: return ui_text(L"Espera o monitor para mostrar cada quadro: sem cortes na imagem, um pouco mais de atraso.", L"Synchronizes frames with the monitor to prevent tearing, with slightly more latency.");
     case IT_FPS: return ui_text(L"O jogo foi feito para 60 quadros por segundo; sem limite ele roda acelerado.", L"The game was designed for 60 fps; unlimited frame rates speed it up.");
     case IT_SCALE: return ui_text(L"Resolução em que o jogo é desenhado: maior = imagem mais nítida, mais trabalho para a placa. Também ajusta a proporção.", L"Higher rendering resolutions give a sharper image and increase GPU load. Also adjusts aspect ratio.");
-    case IT_ASPECT: return ui_text(L"4:3 é o original. As outras alargam o campo de visão para telas largas.", L"4:3 is the original. Other ratios widen the field of view for widescreen displays.");
+    case IT_ASPECT: return ui_text(L"4:3 é o original. As outras alargam o campo de visão para telas largas. 21:9 hor+ estende o cenário até as bordas (as outras usam a imagem 16:9 do jogo, com barras quando a tela é mais larga).", L"4:3 is the original. Other ratios widen the field of view for widescreen displays. 21:9 hor+ extends the scenery to the edges (the others show the game's 16:9 picture, with bars on wider screens).");
     case IT_AA: return ui_text(L"FXAA suaviza as bordas serrilhadas com custo quase nulo.", L"FXAA smooths jagged edges with minimal performance cost.");
     case IT_ANISO: return ui_text(L"Deixa nítidas as texturas vistas em ângulo, como o chão da quadra.", L"Sharpens textures viewed at an angle, such as the pitch.");
     case IT_API: return !hle_gpu_d3d11_available() ? ui_text(L"Neste sistema o jogo desenha com Vulkan (DXVK).", L"This system renders the game with Vulkan (DXVK).")

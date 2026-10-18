@@ -9,7 +9,7 @@ An experimental port of the original-Xbox FIFA Street 2 built through static rec
 ## Status
 
 - Tested on Windows 11 x64: boot, menus, full matches at 60 fps, goal replays, game over, Rule The Street player creator, and saves (written and loaded back).
-- Graphics: Direct3D 8 reimplemented in C on Direct3D 11 (or Vulkan through DXVK). Resolutions up to 4K and ultrawide were tested at 60 fps.
+- Graphics: Direct3D 8 reimplemented in C on Direct3D 11 (or Vulkan through DXVK). Resolutions up to 4K and ultrawide were tested at 60 fps. Aspect options: the game's own 16:9 widescreen (with bars on wider screens) or **21:9 hor+**, which extends the scenery to the screen edges.
 - Audio: DirectSound reimplemented in C with its own mixer, output through XAudio2.
 - Input: XInput reimplemented on host pads and the keyboard.
 - No NV2A GPU, APU/DSP, AC97 or USB model is started. The Xbox kernel and memory layout remain as compatibility layers.
