@@ -4,6 +4,9 @@
 > This repository does **not** include the game, an ISO/XBE, EA assets, generated game code or a precompiled executable.
 > You need your own original-Xbox USA disc. See [the full notice](#notice) at the end.
 
+> [!TIP]
+> **New: play without a controller.** The keyboard now plays as an Xbox controller, with the basic actions of **EA SPORTS FC 27's default WASD layout**: WASD to move, **L** pass, **;** shoot, **K** lob, **O** through ball, **P** sprint, **Esc** pause. See [Keyboard controls](#keyboard-controls).
+
 An experimental port of the original-Xbox FIFA Street 2 built through static recompilation, with native PC graphics, audio and input. It is the sibling of the [FIFA Street (2005) port](https://github.com/batatinhafcbatatinha-pixel/fifa-street-pc) and reuses its runtime and native layers with this game's own addresses. **This public repository is a source and local-build kit, not a ready-to-play game download.** The game's x86 code is translated locally from your own verified disc; no game executable or generated game code is distributed here.
 
 ## Status
@@ -60,20 +63,29 @@ python tools/play.py --game-files game_files
 
 The first build takes a while. `--reuse-generated` skips the translation on later builds.
 
+## Keyboard controls
+
+No controller needed: the keyboard plays as an Xbox controller, with the keys of the default **WASD** layout of EA SPORTS FC 27 ([EA's layout chart](https://help.ea.com/en/articles/ea-sports-fc/mouse-keyboard/)) on the buttons FIFA used on the original Xbox. Only the basic actions are mapped for now.
+
+| Key | In a match | In menus | Controller button |
+| --- | --- | --- | --- |
+| **W A S D** | Move the player | Navigate | Left stick |
+| **Arrows** | | Navigate | D-pad |
+| **L** | Pass | Confirm | A |
+| **;** (**Ç** on ABNT2 keyboards) | Shoot | Back | B |
+| **K** | Lob pass / cross | | X |
+| **O** | Through pass | | Y |
+| **P** | Sprint | | Right trigger |
+| **Enter** | | Confirm, passes *PRESS START* | A + Start |
+| **Esc** | Pause | | Start |
+| **Backspace** | | Back | B |
+| **Tab** | | | Back |
+
+The keyboard drives player 1 and is merged with a controller plugged in there, so both work at the same time. Tricks (right stick), the white/black buttons and the left trigger are not mapped on the keyboard yet. The launcher turns the keyboard on (`RECOMP_KEYBOARD=1`); set `RECOMP_KEYBOARD=0` to turn it off.
+
 ## Controls and settings
 
 Xbox controllers work as on the console. **F1** or **Back + Start** opens the PC settings (display mode, resolution, aspect, VSync, frame limit, graphics API, FXAA, anisotropic filtering, language, volume). **Alt + Enter** toggles fullscreen.
-
-| Keyboard | Action |
-| --- | --- |
-| Arrows | D-pad |
-| Numpad 8 / 4 / 2 / 6 | Left stick |
-| I / J / K / L | Right stick |
-| Z / X / A / S | A / B / X / Y |
-| Q / E | White / Black |
-| 1 / 3 | Left / Right trigger |
-| Enter or Esc | Start |
-| Backspace | Back |
 
 ## Credits and licenses
 
