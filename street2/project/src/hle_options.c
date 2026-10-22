@@ -278,6 +278,9 @@ void hle_options_init(void)
     e = getenv("RECOMP_HLE_VSYNC");                  /* test runs; not published */
     if (e && *e)
         g_opt.vsync = atoi(e) != 0;
+    e = getenv("RECOMP_HLE_MONITOR");                /* test runs: which monitor (0 = primary) */
+    if (e && *e)
+        g_opt.monitor = clampi(atoi(e), 0, 15);
     e = getenv("RECOMP_HLE_ANISO");                  /* test runs; not published */
     if (e && *e)
         g_opt.aniso = clampi(atoi(e), 0, 16);
