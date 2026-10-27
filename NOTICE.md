@@ -4,7 +4,7 @@ This is a source and tooling distribution. It contains no original game assets, 
 
 The independently written native integration (Direct3D 8 on Direct3D 11/Vulkan, DirectSound, XInput, PC settings) and build tooling are offered under the root MIT license. Most native files started as copies of the FIFA Street (2005) port with this game's addresses; existing attribution and upstream licenses take precedence for imported files. This license grants no rights to Electronic Arts game content.
 
-The xboxrecomp runtime and translator are **not** stored here. `tools/build_local.py` downloads them from a pinned commit of the public [fifa-street-pc](https://github.com/batatinhafcbatatinha-pixel/fifa-street-pc) repository, where the modified snapshot is published with its MIT license and the LGPL/GPL notices of its xemu-derived components. Those emulation components exist in the runtime for diagnostics; this port's launch profile does not start them.
+The xboxrecomp runtime and translator are the `xboxrecomp/` submodule: the fork [batatinhafcbatatinha-pixel/xboxrecomp](https://github.com/batatinhafcbatatinha-pixel/xboxrecomp), branch `ports`, a modified version of sp00nznet/xboxrecomp published with its MIT license and the LGPL/GPL notices of its xemu-derived components. Those emulation components exist in the runtime for diagnostics; this port's launch profile does not start them.
 
 DXVK, vkd3d-shader, DejaVu fonts, Capstone and Microsoft tools are external dependencies; license texts are in `licenses/`, binaries are not included.
 

@@ -1,6 +1,6 @@
 """Translate your own verified FIFA Street 2 XBE into private C and build the native PC port.
 
-Everything produced (runtime download, disassembly, generated C, build) stays in --local-dir
+Everything produced (disassembly, generated C, build) stays in --local-dir
 (default .local/), which is excluded from version control. Never upload it.
 """
 import argparse
@@ -10,15 +10,13 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-import tarfile
-import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 KIT = json.loads((ROOT / 'kit.json').read_text(encoding='utf-8'))
 sys.path.insert(0, str(ROOT / 'tools'))
 import validate_game  # noqa: E402
 
-RUNTIME = KIT['runtime']
+TOOLKIT = ROOT / 'xboxrecomp'
 # Functions whose entries the disassembler rejects (an overlapping decode already starts
 # there); their boundaries are known from the original code, so they are listed directly.
 MANUAL_FUNCTIONS = [
@@ -38,32 +36,14 @@ def run(args, cwd, env):
     subprocess.run(list(map(str, args)), cwd=cwd, env=env, check=True)
 
 
-def prepare_runtime(local):
-    """xboxrecomp runtime + translator (with the Street 1 port's fixes) from the pinned public fifa-street-pc commit."""
-    target = local / 'runtime'
-    if (target / 'xboxrecomp/CMakeLists.txt').is_file():
-        return target
-    archive = local / 'downloads' / f'fifa-street-pc-{RUNTIME["commit"]}.tar.gz'
-    if not archive.is_file():
-        print('Downloading', RUNTIME['url'], flush=True)
-        archive.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(RUNTIME['url']) as response:
-            archive.write_bytes(response.read())
-    with tarfile.open(archive) as bundle:
-        for member in bundle.getmembers():
-            parts = Path(member.name).parts
-            if len(parts) < 2 or not member.isfile():
-                continue
-            relative = Path(*parts[1:])
-            if relative.parts[0] != 'xboxrecomp' and relative.as_posix() != 'street1/translate-ebp-boundaries.py':
-                continue
-            destination = target / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(bundle.extractfile(member).read())
-    return target
+def toolkit():
+    """xboxrecomp runtime + translator: the xboxrecomp/ submodule (the ports' fork, branch ports)."""
+    if not (TOOLKIT / 'CMakeLists.txt').is_file():
+        raise ValueError('The xboxrecomp submodule is missing: clone with --recursive or run git submodule update --init')
+    return TOOLKIT
 
 
-def generate(xbe, local, runtime, env):
+def generate(xbe, local, tools, env):
     source = local / 'source/street2'
     if source.exists():
         shutil.rmtree(source)
@@ -75,7 +55,7 @@ def generate(xbe, local, runtime, env):
     disasm, ident, abi = work / 'disasm', work / 'ident', work / 'abi'
     for directory in (disasm, ident, abi, gen):
         directory.mkdir(parents=True, exist_ok=True)
-    py, tools = sys.executable, runtime / 'xboxrecomp'
+    py = sys.executable
     seeds = []
     for name in ('seed_functions.json', 'seed_manual.json'):
         seeds += ['--seed-functions', source / 'hle' / name]
@@ -110,7 +90,7 @@ def generate(xbe, local, runtime, env):
         raise ValueError('Translation is missing required functions: ' + ', '.join(missing))
     # Post-passes, in the order the port was validated with.
     run([py, source / 'hle/translate-nv-interrupt-writes.py'], source, env)
-    run([py, runtime / 'street1/translate-ebp-boundaries.py', '--apply', '--directory', gen], source, env)
+    run([py, ROOT / 'tools/translate-ebp-boundaries.py', '--apply', '--directory', gen], source, env)
     run([py, source / 'hle/make-smp-serial.py'], source, env)
     run([py, source / 'hle/apply-hle-wrappers.py'], source, env)
     (local / 'generation-complete.json').write_text(json.dumps({'xbeSha256': KIT['required_files']['default.xbe']}) + '\n',
@@ -155,16 +135,16 @@ def main():
     clang_cl, cmake, ninja = (shutil.which(n, path=env.get('PATH')) for n in ('clang-cl', 'cmake', 'ninja'))
     if not (clang_cl and cmake and ninja):
         raise ValueError('clang-cl, cmake and ninja must be on PATH (or pass --llvm-dir)')
-    runtime = prepare_runtime(local)
+    tools = toolkit()
     stamp = local / 'generation-complete.json'
     if args.reuse_generated and stamp.is_file():
         project = local / 'source/street2/project'
     else:
         stamp.unlink(missing_ok=True)
-        project = generate(game_files / 'default.xbe', local, runtime, env)
+        project = generate(game_files / 'default.xbe', local, tools, env)
     build = local / 'build'
     run([cmake, '-S', project, '-B', build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=RelWithDebInfo',
-         '-DCMAKE_C_COMPILER=' + clang_cl, '-DXBOXRECOMP_DIR=' + str(runtime / 'xboxrecomp')], local, env)
+         '-DCMAKE_C_COMPILER=' + clang_cl, '-DXBOXRECOMP_DIR=' + str(tools)], local, env)
     run([cmake, '--build', build, '--parallel', str(args.jobs), '--target', 'fifastreet_recomp'], local, env)
     print('Built privately in', build)
     print('Play with: python tools/play.py --game-files', game_files)

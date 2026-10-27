@@ -48,6 +48,8 @@ Do not upload the ISO, extracted files, generated code or the built executable.
 
 Requirements: Python 3.10+ (with `pip install -r requirements.txt`), Visual Studio 2022 Build Tools (C++ workload, Windows SDK), LLVM/Clang (`clang-cl`), CMake and Ninja.
 
+The xboxrecomp toolkit is the `xboxrecomp/` submodule ([batatinhafcbatatinha-pixel/xboxrecomp](https://github.com/batatinhafcbatatinha-pixel/xboxrecomp), branch `ports`): clone with `git clone --recursive`, or run `git submodule update --init` in an existing clone. The source-kit ZIP from Releases includes it; GitHub's **Code → Download ZIP** does not.
+
 ```powershell
 python -m pip install -r requirements.txt
 python tools/build_local.py --game-files game_files --llvm-dir "C:\Program Files\LLVM"
@@ -57,7 +59,7 @@ python tools/play.py --game-files game_files
 `build_local.py`:
 
 1. validates your files;
-2. downloads the xboxrecomp runtime and translator from a pinned commit of the public [fifa-street-pc](https://github.com/batatinhafcbatatinha-pixel/fifa-street-pc) repository (the same runtime this port was tested with);
+2. takes the xboxrecomp runtime and translator from the `xboxrecomp/` submodule;
 3. disassembles your `default.xbe` with this game's function seeds and translates it into private C under `.local/`;
 4. applies the post-passes (interrupt acknowledgement, frame-pointer boundaries, serialized heap code, native API wrappers) and compiles the port.
 
@@ -92,7 +94,7 @@ The PC settings screen is drawn in the game's own style (graffiti title, paper p
 ## Credits and licenses
 
 - Port integration and native backend work: [batatinhafcbatatinha-pixel](https://github.com/batatinhafcbatatinha-pixel).
-- [xboxrecomp](https://github.com/sp00nznet/xboxrecomp): **Ned Heller / sp00nz** and contributors (MIT). The modified runtime snapshot is published, with all its notices and licenses, in [fifa-street-pc](https://github.com/batatinhafcbatatinha-pixel/fifa-street-pc) and downloaded at build time; see `street2/project/LICENSE.xboxrecomp`.
+- [xboxrecomp](https://github.com/sp00nznet/xboxrecomp): **Ned Heller / sp00nz** and contributors (MIT). The modified copy used here is the fork [batatinhafcbatatinha-pixel/xboxrecomp](https://github.com/batatinhafcbatatinha-pixel/xboxrecomp) (branch `ports`), with all its notices and licenses, included as the `xboxrecomp/` submodule; see `street2/project/LICENSE.xboxrecomp`. `tools/translate-ebp-boundaries.py` comes from [fifa-street-pc](https://github.com/batatinhafcbatatinha-pixel/fifa-street-pc).
 - [xemu](https://github.com/xemu-project/xemu) contributors for LGPL/GPL runtime components credited in that snapshot's notices (present in the runtime, not started by this port's profile).
 - [DXVK](https://github.com/doitsujin/dxvk) (zlib), [vkd3d-shader](https://gitlab.winehq.org/wine/vkd3d) (LGPL) and DejaVu fonts: optional external dependencies; licenses in `licenses/`.
 - [Capstone](https://www.capstone-engine.org/): disassembler used by the translator (installed through `requirements.txt`).

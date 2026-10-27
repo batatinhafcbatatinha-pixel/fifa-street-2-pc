@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 KIT = json.loads((ROOT / 'kit.json').read_text(encoding='utf-8'))
 ALLOWED = {'.c', '.h', '.cpp', '.hpp', '.inc', '.hlsl', '.cmake', '.txt', '.md', '.py', '.json',
            '.toml', '.cmd', '.ps1', '.sh', '.yml', '.yaml', '.patch'}
-ROOT_FILES = {'.gitignore', '.gitattributes', 'LICENSE', 'NOTICE'}
+ROOT_FILES = {'.gitignore', '.gitattributes', '.gitmodules', 'LICENSE', 'NOTICE'}
 FORBIDDEN_PARTS = {'.local', 'game_files', 'generated', 'gen', 'out', 'output', 'build', 'dist',
                    'runs', 'analysis', '__pycache__', 'assets'}
 # Executables/archives/images/audio: PE, XBE, XEX2, ELF, ZIP, PNG, RIFF, DDS, EA BIG, 7z, gzip.
@@ -26,21 +26,45 @@ GENERATED_MARKERS = (b'#define RECOMP_' + b'GENERATED_CODE', b'DEFINE_REX_' + b'
 MAX_BYTES = 512 * 1024
 
 
+def submodules():
+    """Paths of the submodules (the xboxrecomp toolkit), from .gitmodules."""
+    if not (ROOT / '.gitmodules').is_file():
+        return ()
+    lines = subprocess.check_output(['git', 'config', '--file', '.gitmodules', '--get-regexp', r'\.path$'],
+                                    cwd=ROOT).decode('utf-8').splitlines()
+    return tuple(line.split(' ', 1)[1] + '/' for line in lines)
+
+
 def audited_files():
-    names = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode('utf-8').split('\0')
+    # The toolkit submodule goes into the kit too (it must be checked out). Of its files only the allowed source
+    # types are taken (the translator itself, so no size or generated-code checks); this repository's own files
+    # must all pass.
+    toolkit = submodules()
+    names = subprocess.check_output(['git', 'ls-files', '-z', '--recurse-submodules'],
+                                    cwd=ROOT).decode('utf-8').split('\0')
     files = []
     for name in filter(None, names):
         path = PurePosixPath(name)
+        vendored = name.startswith(toolkit) if toolkit else False
         if path.is_absolute() or '..' in path.parts or any(part in FORBIDDEN_PARTS for part in path.parts):
+            if vendored:
+                continue
             raise ValueError('Forbidden publication path: ' + name)
         source = ROOT / name
         if source.is_symlink() or not source.is_file():
             raise ValueError('Only regular files may be published: ' + name)
         if path.suffix.lower() not in ALLOWED and path.name not in ROOT_FILES and not path.name.startswith(('LICENSE', 'COPYING')):
+            if vendored:
+                continue
             raise ValueError('Not an allowed source file: ' + name)
         payload = source.read_bytes()
         if b'\0' in payload or payload.startswith(MAGIC):
+            if vendored:
+                continue
             raise ValueError('Binary content rejected: ' + name)
+        if vendored:
+            files.append((name, payload))
+            continue
         if len(payload) > MAX_BYTES:
             raise ValueError('File too large for hand-written source (possible data dump): ' + name)
         if any(marker in payload for marker in GENERATED_MARKERS) and name not in KIT.get('audit_exempt', []):
