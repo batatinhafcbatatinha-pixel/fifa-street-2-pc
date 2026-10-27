@@ -142,6 +142,11 @@ def main():
     else:
         stamp.unlink(missing_ok=True)
         project = generate(game_files / 'default.xbe', local, tools, env)
+    # These host sources must also reach an existing --reuse-generated tree:
+    # the command-worker hook renames the generated entry to *_gen, so omitting
+    # its native implementation leaves sub_00227853 undefined at link time.
+    for relative in ('CMakeLists.txt', 'src/native_command_worker.c'):
+        shutil.copy2(ROOT / 'street2/project' / relative, project / relative)
     build = local / 'build'
     run([cmake, '-S', project, '-B', build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=RelWithDebInfo',
          '-DCMAKE_C_COMPILER=' + clang_cl, '-DXBOXRECOMP_DIR=' + str(tools)], local, env)

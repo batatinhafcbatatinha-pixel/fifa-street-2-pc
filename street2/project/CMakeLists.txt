@@ -74,6 +74,7 @@ set(GAME_SOURCES
     src/hle_native_create.c
     src/game_hooks.c
     src/native_engine_batch.c
+    src/native_command_worker.c
     src/native_audio_output.c
     src/native_audio_mix.c
     src/native_video_trace.c
