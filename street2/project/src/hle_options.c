@@ -182,6 +182,7 @@ static void save_ini(void)
     ini_put(L"fxaa", g_opt.aa);
     ini_put(L"msaa", g_opt.msaa);
     ini_put(L"anisotropico", g_opt.aniso);
+    ini_put(L"motion_blur", g_opt.motion_blur);
     ini_put(L"api_grafica", g_opt.api);
     ini_put(L"gpu", g_opt.adapter);
     ini_put(L"idioma", g_opt.language);
@@ -263,6 +264,7 @@ void hle_options_init(void)
     g_opt.aa = clampi(ini_get(L"fxaa", 0), 0, 1);
     g_opt.msaa = ini_get(L"msaa", 0);
     g_opt.aniso = clampi(ini_get(L"anisotropico", 0), 0, 16);
+    g_opt.motion_blur = ini_get(L"motion_blur", 1) != 0;
     g_opt.api = clampi(ini_get(L"api_grafica", 0), 0, 1);
     g_opt.adapter = clampi(ini_get(L"gpu", -1), -1, 15);
     g_opt.language = ini_get(L"idioma", 1) == 5 ? 5 : 1;
@@ -736,7 +738,7 @@ void hle_options_apply_display(uint32_t pw, uint32_t ph)
 /* ------------------------------------------------------------ the menu */
 
 enum {
-    IT_DISPLAY, IT_MONITOR, IT_REFRESH, IT_VSYNC, IT_FPS, IT_SCALE, IT_ASPECT, IT_AA, IT_MSAA, IT_ANISO,
+    IT_DISPLAY, IT_MONITOR, IT_REFRESH, IT_VSYNC, IT_FPS, IT_SCALE, IT_ASPECT, IT_AA, IT_MSAA, IT_ANISO, IT_MBLUR,
     IT_API, IT_GPU, IT_UI_LANG, IT_LANG, IT_VOLUME, IT_RESUME, IT_RESTART, IT_QUIT, IT_COUNT
 };
 
@@ -897,6 +899,7 @@ static void change(int it, int d)
     case IT_AA: g_opt.aa = !g_opt.aa; break;
     case IT_MSAA: g_opt.msaa = cycle(k_msaa, 5, g_opt.msaa, d); break;
     case IT_ANISO: g_opt.aniso = cycle(k_aniso, 5, g_opt.aniso, d); break;
+    case IT_MBLUR: g_opt.motion_blur = !g_opt.motion_blur; break;
     case IT_API:
         if (!hle_gpu_vulkan_available() || !hle_gpu_d3d11_available())
             break;
@@ -1749,6 +1752,10 @@ static void item_text(int it, wchar_t *label, wchar_t *value, int *greyed)
         if (g_opt.aniso) swprintf(value, 128, L"%dx", g_opt.aniso);
         else wcscpy(value, ui_text(L"O do jogo", L"Game default"));
         break;
+    case IT_MBLUR:
+        wcscpy(label, ui_text(L"Desfoque de movimento", L"Motion blur"));
+        wcscpy(value, g_opt.motion_blur ? ui_text(L"Ligado", L"On") : ui_text(L"Desligado", L"Off"));
+        break;
     case IT_API:
         wcscpy(label, ui_text(L"API gráfica", L"Graphics API"));
         wcscpy(value, g_opt.api ? L"Vulkan" : L"DirectX 11");
@@ -1796,6 +1803,7 @@ static const wchar_t *item_help(int it)
     case IT_AA: return ui_text(L"FXAA suaviza as bordas serrilhadas com custo quase nulo.", L"FXAA smooths jagged edges with minimal performance cost.");
     case IT_MSAA: return ui_text(L"Suaviza as bordas da cena 3D com várias amostras por pixel. \"O do jogo\" usa o que o Xbox usava. Reinicia o jogo.", L"Smooths the edges of the 3D scene with several samples per pixel. \"Game default\" uses what the Xbox used. Restarts the game.");
     case IT_ANISO: return ui_text(L"Deixa nítidas as texturas vistas em ângulo, como o chão da quadra.", L"Sharpens textures viewed at an angle, such as the pitch.");
+    case IT_MBLUR: return ui_text(L"O borrão que o jogo aplica à imagem nos lances rápidos. Desligado = imagem sempre nítida.", L"The blur the game applies to the picture during fast moments. Off = always a sharp picture.");
     case IT_API: return !hle_gpu_d3d11_available() ? ui_text(L"Neste sistema o jogo desenha com Vulkan (DXVK).", L"This system renders the game with Vulkan (DXVK).")
                       : hle_gpu_vulkan_available()
                         ? ui_text(L"DirectX 11 ou Vulkan (pela DXVK). A imagem é a mesma; use a que rodar melhor na sua placa.", L"DirectX 11 or Vulkan (DXVK). Choose whichever performs better on your GPU.")
@@ -1912,6 +1920,12 @@ static void render_menu(void)
     ID3D11DeviceContext_UpdateSubresource(g_hle.ctx, (ID3D11Resource *)s_tex, 0, NULL, s_bits, (UINT)s_pw * 4u, 0);
 }
 
+/* game_hooks.c, from the game thread (no renderer headers there). */
+int hle_options_motion_blur(void)
+{
+    return g_opt.motion_blur;
+}
+
 void game_screen_loaded(const char *name)
 {
     /* Button icons, backgrounds and screen tables load beside the screens. */
@@ -1940,7 +1954,7 @@ void hle_options_draw_overlay(ID3D11RenderTargetView *rtv, UINT w, UINT h)
     D3D11_VIEWPORT vp;
     if (!s_open || !rtv || w < 64 || h < 64 || !overlay_resources())
         return;
-    lh = (int)h / 26;
+    lh = (int)h / 27;
     if (lh < 12) lh = 12;
     if ((int)w != s_pw || (int)h != s_ph || lh != s_lh || !s_srv)
         surface_resize((int)w, (int)h, lh);

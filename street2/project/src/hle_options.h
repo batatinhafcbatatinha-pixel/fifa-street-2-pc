@@ -17,6 +17,7 @@ typedef struct HleOptions {
     int aa;           /* 0 off, 1 FXAA */
     int msaa;         /* MSAA samples: 0 off, -1 what the game asked for, 2/4/8 (restart) */
     int aniso;        /* 0 the game's filtering, else forced anisotropy 2..16 */
+    int motion_blur;  /* 1 the game's motion blur, 0 off (game_hooks.c) */
     int api;          /* 0 Direct3D 11, 1 Vulkan (DXVK)                (restart) */
     int adapter;      /* -1 system default, else DXGI adapter index  (restart) */
     int language;     /* EEPROM language: 1 English, 5 Spanish        (restart) */

@@ -18,6 +18,22 @@ void game_screen_loaded(const char *name);
 
 static void screen_load_hook(void);
 
+/* Motion blur: the post-FX state (0x3404B8) pushes its motion blur to the
+ * renderer in 0x14DC10(this = state): [this+0x58] on/off, +0x54 amount,
+ * +0x59/+0x5C its second part, into [[this+0xC]+0x2BA/+0x140/+0x2BC..]
+ * (0x14AFA0 sets the blur passes up). With the PC setting off the game's own
+ * "off" path runs: the flag is cleared before the call; the script effects
+ * write it again on their next update. Not verified in game. */
+void sub_0014DC10_gen(void);
+int hle_options_motion_blur(void);
+
+void sub_0014DC10(void)
+{
+    if (g_ecx && !hle_options_motion_blur())
+        MEM8(g_ecx + 0x58) = 0;
+    sub_0014DC10_gen();
+}
+
 void sub_001793E0(void)
 {
     int smp = guest_cpu_native_enter();
