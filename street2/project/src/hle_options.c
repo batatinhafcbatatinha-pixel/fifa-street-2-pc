@@ -1832,6 +1832,8 @@ static const wchar_t *item_help(int it)
 #define S2_TAN_SEL  RGB(194, 168, 112)
 #define S2_RED      RGB(176, 32, 30)
 
+static int s_scroll;                    /* pixels of the row list scrolled past */
+
 static void render_menu(void)
 {
     const int lh = s_lh, w = s_pw, h = s_ph;
@@ -1839,41 +1841,72 @@ static void render_menu(void)
     const int x0 = (w - cw) / 2, x1 = x0 + cw;
     const int xm = x0 + cw * 42 / 100;                       /* labels end here */
     const int va0 = xm + lh * 2, va1 = x1 - lh;              /* the value band */
-    const int top = lh * 7 / 2, foot = h - lh * 2;
-    int y, it, i, n = s_pw * s_ph, bx, pb;
+    const int top = lh * 7 / 2, foot = h - lh * 2, list_top = top + lh / 2;
+    int y, it, i, n = s_pw * s_ph, bx, pb, list_h, view_h;
+    int row_y[IT_COUNT], head_y[IT_COUNT];
     SelectObject(s_dc, s_bmp);
     SetBkMode(s_dc, TRANSPARENT);
     fill(0, 0, w, h, BG_RGB);
-    /* Where the rows end, for the poster's size. */
-    y = top + lh / 2;
+    /* Where each row sits in the list (row_y, from the list's top; -1 hidden)
+     * and the list's height. When it is taller than the room above the help
+     * line, the list scrolls to keep the selected row (and its section title)
+     * in view. */
+    y = 0;
     for (it = 0; it < IT_COUNT; it++) {
-        if (it == IT_DISPLAY || it == IT_UI_LANG)
+        head_y[it] = -1;
+        if (it == IT_DISPLAY || it == IT_UI_LANG) {
+            head_y[it] = y;
             y += lh * 3 / 4;
+        }
         if (it == IT_RESUME)
             y += lh / 3;
+        row_y[it] = -1;
         if (it == IT_RESTART && !restart_pending())
             continue;
+        row_y[it] = y;
         y += lh;
     }
-    pb = y + lh * 3 / 2;
+    list_h = y;
+    view_h = foot - lh * 7 / 4 - list_top;
+    if (view_h < lh * 3)
+        view_h = lh * 3;
+    if (list_h <= view_h) {
+        s_scroll = 0;
+        view_h = list_h;
+    } else if (row_y[s_sel] >= 0) {
+        int y0 = head_y[s_sel] >= 0 ? head_y[s_sel] : row_y[s_sel];
+        if (s_sel == 0)
+            y0 = 0;
+        if (y0 < s_scroll)
+            s_scroll = y0;
+        if (row_y[s_sel] + lh > s_scroll + view_h)
+            s_scroll = row_y[s_sel] + lh - view_h;
+        if (s_sel == IT_COUNT - 1)
+            s_scroll = list_h - view_h;
+    }
+    if (s_scroll > list_h - view_h)
+        s_scroll = list_h - view_h;
+    if (s_scroll < 0)
+        s_scroll = 0;
+    pb = list_top + view_h + lh * 3 / 2;
     torn(x0 - lh * 2, top, x1 + lh * 2, pb, lh / 6 + 1, S2_PAPER, 5u);
     for (i = top + lh; i < pb - lh / 2; i += lh * 3 / 2)     /* the paper's creases */
         fill(x0 - lh * 3 / 2, i, x1 + lh * 3 / 2, i + 1, S2_STREAK);
     text_outline(ui_text(L"Configurações", L"Settings"), x0 - lh, 0, x1, top + lh / 4, RGB(250, 250, 250), s_font_title, DT_LEFT, lh / 9 + 1);
     text(s_standalone ? L"PC  •  FIFA Street 2" : ui_text(L"PC  •  jogo pausado", L"PC  •  game paused"), x0, top - lh * 3 / 2, x1, top - lh / 4,
          RGB(235, 232, 220), s_font_small, DT_RIGHT);
-    y = top + lh / 2;
     for (it = 0; it < IT_COUNT; it++) {
         wchar_t label[128], value[160], v[200];
         int greyed, sel = it == s_sel, ym, a = lh * 2 / 5;
-        if (it == IT_DISPLAY || it == IT_UI_LANG) {
+        SetRectEmpty(&s_row[it]);
+        SetRectEmpty(&s_row_left[it]);
+        if (head_y[it] >= s_scroll && head_y[it] + lh * 3 / 4 <= s_scroll + view_h) {
+            y = list_top + head_y[it] - s_scroll;
             text(it == IT_DISPLAY ? ui_text(L"Vídeo", L"Video") : ui_text(L"Sistema", L"System"), x0, y, xm, y + lh * 3 / 4, S2_RED, s_font_small, DT_LEFT);
-            y += lh * 3 / 4;
         }
-        if (it == IT_RESUME)
-            y += lh / 3;
-        if (it == IT_RESTART && !restart_pending())
-            continue;
+        if (row_y[it] < s_scroll || row_y[it] + lh > s_scroll + view_h)
+            continue;                                        /* hidden, or scrolled out */
+        y = list_top + row_y[it] - s_scroll;
         item_text(it, label, value, &greyed);
         ym = y + lh / 2;
         SetRect(&s_row[it], x0 - lh, y, x1 + lh, y + lh);
@@ -1897,7 +1930,16 @@ static void render_menu(void)
             text(v, va0 + lh / 2, y, va1 - lh / 2, y + lh, greyed ? RGB(150, 146, 136) : S2_INK, sel ? s_font_bold : s_font, DT_CENTER);
             SetRect(&s_row_left[it], va0 - lh * 2, y, va0 + lh, y + lh);
         }
-        y += lh;
+    }
+    /* More rows above / below: small ink triangles at the list's right end. */
+    if (s_scroll > 0) {
+        POINT p[3] = { { x1 + lh, list_top }, { x1 + lh / 2, list_top + lh / 2 }, { x1 + lh * 3 / 2, list_top + lh / 2 } };
+        poly(p, 3, S2_INK);
+    }
+    if (s_scroll + view_h < list_h) {
+        int yb = list_top + view_h;
+        POINT p[3] = { { x1 + lh, yb }, { x1 + lh / 2, yb - lh / 2 }, { x1 + lh * 3 / 2, yb - lh / 2 } };
+        poly(p, 3, S2_INK);
     }
     /* Help for the selected line on the poster, then the torn strip with
      * the button hints. */
@@ -1954,7 +1996,7 @@ void hle_options_draw_overlay(ID3D11RenderTargetView *rtv, UINT w, UINT h)
     D3D11_VIEWPORT vp;
     if (!s_open || !rtv || w < 64 || h < 64 || !overlay_resources())
         return;
-    lh = (int)h / 27;
+    lh = (int)h / 26;
     if (lh < 12) lh = 12;
     if ((int)w != s_pw || (int)h != s_ph || lh != s_lh || !s_srv)
         surface_resize((int)w, (int)h, lh);
