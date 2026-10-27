@@ -87,6 +87,8 @@ The keyboard drives player 1 and is merged with a controller plugged in there, s
 
 Xbox controllers work as on the console. **F1** or **Back + Start** opens the PC settings (display mode, resolution, aspect, VSync, frame limit, graphics API, FXAA, anisotropic filtering, language, volume). **Alt + Enter** toggles fullscreen.
 
+The PC settings screen is drawn in the game's own style (graffiti title, paper poster, black selection stroke, tan value bands with white arrows) with the game's fonts, FifaStreet_Title Leigh and EAS SansCondensed. They are read from your disc (`data/aptanims/aptfnts.big`) when the game starts and are not part of this repository. On the main menu and the Options screens a **BACK · PC Settings** hint shows that the controller's Back button opens it there. The menu is in English by default; *Menu language* switches it to Portuguese.
+
 ## Credits and licenses
 
 - Port integration and native backend work: [batatinhafcbatatinha-pixel](https://github.com/batatinhafcbatatinha-pixel).
