@@ -1,3 +1,22 @@
+# Native animation math — 2026-10-30
+
+Three of the game's own functions now run as native C: the skinning palette
+blend (0x1A4BF0), the skeleton's bone matrices (0x1A7DD0) and the matrix
+multiply used all over the game (0x25424B). They are the same code as Street
+1's 0x1A03B0, 0x1A4EE0 and 0x161386 (the translations differ only in
+addresses) and were the hottest game code in a match. Each is a port of the
+translated code operation by operation, so results are bit-identical.
+
+Switches: `RECOMP_GAME_NATIVE_SKIN=0` runs the translated functions;
+`RECOMP_GAME_NATIVE_CHECK=1` runs both and compares every result (`MISMATCH`
+in the log); `RECOMP_HLE_AB=2` alternates them every 600 frames.
+
+Check mode over a match: 18 million matrix multiplies, 139 thousand skeletons
+and 2.5 million skinning blends, 0 mismatches. Interleaved A/B in one match
+(220 s, texture watch off to isolate this change), 12 consecutive window
+pairs with similar draw counts and no load spikes: 6.68 → 5.62 ms per frame
+(+18.8% fps); skinning blend 3.49 → 1.12 µs per call.
+
 # Texture change detection — 2026-10-30
 
 Textures in the contiguous window are now watched instead of re-hashed: after a
