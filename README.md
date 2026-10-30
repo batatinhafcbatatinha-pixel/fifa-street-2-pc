@@ -65,6 +65,26 @@ python tools/play.py --game-files game_files
 
 The first build takes a while. `--reuse-generated` skips the translation on later builds.
 
+## Build on Linux
+
+The same kit builds a native Linux x86-64 executable (no Wine): the window, input and audio are SDL2, Direct3D 11
+is DXVK native (a Linux library implementing D3D11 on Vulkan) and the HLSL shaders compile through vkd3d-shader.
+Install Python 3.10+, Clang, CMake, Ninja, SDL2, SDL2_ttf, OpenSSL, libepoxy and Vulkan drivers and headers
+(Debian/Ubuntu: `clang cmake ninja-build pkg-config libsdl2-dev libsdl2-ttf-dev libssl-dev libepoxy-dev
+libvulkan-dev mesa-vulkan-drivers`), plus [DXVK native 3.1.1](https://github.com/doitsujin/dxvk/releases) and
+vkd3d-shader 1.19 or newer built with HLSL support.
+
+```sh
+python3 -m pip install -r requirements.txt
+python3 tools/build_local.py --game-files game_files \
+  --dxvk-native-dir /path/to/dxvk-native/usr --vkd3d-dir /path/to/vkd3d-install
+python3 tools/play.py --game-files game_files
+```
+
+The DXVK prefix must contain `include/dxvk` and `lib/libdxvk_d3d11.so`, `lib/libdxvk_dxgi.so`; the vkd3d prefix
+the headers and `lib/libvkd3d-shader.so.1`. Both travel next to the executable in `lib/`. Status: translation and
+build verified on Ubuntu 24.04 (Clang 18); gameplay on Linux not yet checked.
+
 ## Keyboard controls
 
 No controller needed: the keyboard plays as an Xbox controller, with the keys of the default **WASD** layout of EA SPORTS FC 27 ([EA's layout chart](https://help.ea.com/en/articles/ea-sports-fc/mouse-keyboard/)) on the buttons FIFA used on the original Xbox. Only the basic actions are mapped for now.

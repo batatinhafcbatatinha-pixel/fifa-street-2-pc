@@ -14,14 +14,18 @@
 #include <stdio.h>
 #include "hle_win32.h"
 #include "recomp/gen/recomp_types.h"
+#ifdef _WIN32
 #include <mmsystem.h>
+#endif
 
 #define KTICK_VA (0x00740000u + 0x020u)   /* XBOX_KERNEL_DATA_BASE + KDATA_TICK_COUNT */
 
 static DWORD WINAPI native_kernel_clock_thread(LPVOID unused)
 {
     (void)unused;
-    timeBeginPeriod(1);
+#ifdef _WIN32
+    timeBeginPeriod(1);   /* 1 ms Sleep granularity; POSIX sleeps are already fine-grained */
+#endif
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
     for (;;) {
         MEM32(KTICK_VA) = GetTickCount();

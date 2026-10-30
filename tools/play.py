@@ -26,7 +26,7 @@ def main():
     problems = validate_game.validate(game_files)
     if problems:
         parser.error('; '.join(problems))
-    executable = args.local_dir.resolve() / 'build/fifastreet_recomp.exe'
+    executable = args.local_dir.resolve() / 'build' / ('fifastreet_recomp.exe' if os.name == 'nt' else 'fifastreet_recomp')
     if not executable.is_file():
         parser.error('Build first: python tools/build_local.py --game-files ' + str(game_files))
     env = {k: v for k, v in os.environ.items() if not k.startswith('RECOMP_')}

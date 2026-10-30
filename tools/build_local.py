@@ -56,6 +56,11 @@ def generate(xbe, local, tools, env):
     for directory in (disasm, ident, abi, gen):
         directory.mkdir(parents=True, exist_ok=True)
     py = sys.executable
+    # tools.disasm reads <xbe stem>_analysis.json beside the XBE: parse a private copy of the XBE first.
+    xbe_copy = work / 'default.xbe'
+    shutil.copy2(xbe, xbe_copy)
+    xbe = xbe_copy
+    run([py, '-m', 'tools.xbe_parser', xbe, '--json', work / 'default_analysis.json'], tools, env)
     seeds = []
     for name in ('seed_functions.json', 'seed_manual.json'):
         seeds += ['--seed-functions', source / 'hle' / name]
@@ -117,7 +122,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--game-files', type=Path, required=True, help='Extracted disc folder named game_files')
     parser.add_argument('--local-dir', type=Path, default=ROOT / '.local')
-    parser.add_argument('--llvm-dir', type=Path, help='LLVM install folder containing bin/clang-cl (default: PATH)')
+    parser.add_argument('--llvm-dir', type=Path, help='LLVM install folder containing bin/clang-cl or bin/clang (default: PATH)')
+    parser.add_argument('--dxvk-native-dir', type=Path, help='Linux: DXVK native prefix (include/dxvk, lib/libdxvk_d3d11.so)')
+    parser.add_argument('--vkd3d-dir', type=Path, help='Linux: vkd3d prefix (include/vkd3d, lib/libvkd3d-shader.so)')
     parser.add_argument('--reuse-generated', action='store_true', help='Skip the translation after a completed one')
     parser.add_argument('--jobs', type=int, default=max(1, (os.cpu_count() or 4) - 2))
     args = parser.parse_args()
@@ -125,16 +132,15 @@ def main():
     problems = validate_game.validate(game_files)
     if problems:
         raise ValueError('Unsupported game files: ' + '; '.join(problems))
-    if os.name != 'nt':
-        raise ValueError('This kit currently builds on Windows only')
     local = args.local_dir.resolve()
     local.mkdir(parents=True, exist_ok=True)
     env = developer_environment()
     if args.llvm_dir:
         env['PATH'] = str(args.llvm_dir.resolve() / 'bin') + os.pathsep + env.get('PATH', '')
-    clang_cl, cmake, ninja = (shutil.which(n, path=env.get('PATH')) for n in ('clang-cl', 'cmake', 'ninja'))
+    compiler_name = 'clang-cl' if os.name == 'nt' else 'clang'
+    clang_cl, cmake, ninja = (shutil.which(n, path=env.get('PATH')) for n in (compiler_name, 'cmake', 'ninja'))
     if not (clang_cl and cmake and ninja):
-        raise ValueError('clang-cl, cmake and ninja must be on PATH (or pass --llvm-dir)')
+        raise ValueError(compiler_name + ', cmake and ninja must be on PATH (or pass --llvm-dir)')
     tools = toolkit()
     stamp = local / 'generation-complete.json'
     if args.reuse_generated and stamp.is_file():
@@ -145,11 +151,16 @@ def main():
     # These host sources must also reach an existing --reuse-generated tree:
     # the command-worker hook renames the generated entry to *_gen, so omitting
     # its native implementation leaves sub_00227853 undefined at link time.
-    for relative in ('CMakeLists.txt', 'src/native_command_worker.c'):
+    for relative in ('CMakeLists.txt', 'src/native_command_worker.c', 'src/native_kernel_clock.c', 'src/hle_posix_win32.h'):
         shutil.copy2(ROOT / 'street2/project' / relative, project / relative)
     build = local / 'build'
-    run([cmake, '-S', project, '-B', build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=RelWithDebInfo',
-         '-DCMAKE_C_COMPILER=' + clang_cl, '-DXBOXRECOMP_DIR=' + str(tools)], local, env)
+    configure = [cmake, '-S', project, '-B', build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=RelWithDebInfo',
+                 '-DCMAKE_C_COMPILER=' + clang_cl, '-DXBOXRECOMP_DIR=' + str(tools)]
+    if args.dxvk_native_dir:
+        configure.append('-DDXVK_NATIVE_DIR=' + str(args.dxvk_native_dir.resolve()))
+    if args.vkd3d_dir:
+        configure.append('-DVKD3D_DIR=' + str(args.vkd3d_dir.resolve()))
+    run(configure, local, env)
     run([cmake, '--build', build, '--parallel', str(args.jobs), '--target', 'fifastreet_recomp'], local, env)
     print('Built privately in', build)
     print('Play with: python tools/play.py --game-files', game_files)
