@@ -124,7 +124,8 @@ def main():
     parser.add_argument('--local-dir', type=Path, default=ROOT / '.local')
     parser.add_argument('--llvm-dir', type=Path, help='LLVM install folder containing bin/clang-cl or bin/clang (default: PATH)')
     parser.add_argument('--dxvk-native-dir', type=Path, help='Linux: DXVK native prefix (include/dxvk, lib/libdxvk_d3d11.so)')
-    parser.add_argument('--vkd3d-dir', type=Path, help='Linux: vkd3d prefix (include/vkd3d, lib/libvkd3d-shader.so)')
+    parser.add_argument('--vkd3d-dir', type=Path, help='Linux, macOS: vkd3d prefix (include/vkd3d, lib/libvkd3d-shader)')
+    parser.add_argument('--dxmt-dir', type=Path, help='macOS: DXMT prefix from tools/macos/build-deps.sh')
     parser.add_argument('--reuse-generated', action='store_true', help='Skip the translation after a completed one')
     parser.add_argument('--jobs', type=int, default=max(1, (os.cpu_count() or 4) - 2))
     args = parser.parse_args()
@@ -151,7 +152,7 @@ def main():
     # These host sources must also reach an existing --reuse-generated tree:
     # the command-worker hook renames the generated entry to *_gen, so omitting
     # its native implementation leaves sub_00227853 undefined at link time.
-    for relative in ('CMakeLists.txt', 'src/native_command_worker.c', 'src/native_kernel_clock.c', 'src/hle_posix_win32.h'):
+    for relative in ('CMakeLists.txt', 'src/native_metal_bridge.m', 'src/native_command_worker.c', 'src/native_kernel_clock.c', 'src/hle_posix_win32.h'):
         shutil.copy2(ROOT / 'street2/project' / relative, project / relative)
     build = local / 'build'
     configure = [cmake, '-S', project, '-B', build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=RelWithDebInfo',
@@ -160,6 +161,10 @@ def main():
         configure.append('-DDXVK_NATIVE_DIR=' + str(args.dxvk_native_dir.resolve()))
     if args.vkd3d_dir:
         configure.append('-DVKD3D_DIR=' + str(args.vkd3d_dir.resolve()))
+    if sys.platform == 'darwin':
+        if not (args.dxmt_dir and args.vkd3d_dir):
+            raise ValueError('macOS: pass --dxmt-dir and --vkd3d-dir (see MACOS.md)')
+        configure += ['-DDXMT_DIR=' + str(args.dxmt_dir.resolve()), '-DCMAKE_OSX_ARCHITECTURES=x86_64']
     run(configure, local, env)
     run([cmake, '--build', build, '--parallel', str(args.jobs), '--target', 'fifastreet_recomp'], local, env)
     print('Built privately in', build)

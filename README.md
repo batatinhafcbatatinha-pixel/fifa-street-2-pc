@@ -16,7 +16,7 @@ An experimental port of the original-Xbox FIFA Street 2 built through static rec
 - Audio: DirectSound reimplemented in C with its own mixer, output through XAudio2.
 - Input: XInput reimplemented on host pads and the keyboard.
 - No NV2A GPU, APU/DSP, AC97 or USB model is started. The Xbox kernel and memory layout remain as compatibility layers.
-- Windows x64 only for now.
+- Tested on Windows x64; a Linux build path exists. Experimental [macOS](MACOS.md) build files are included; they have not been compiled or run yet.
 
 ## Why a native port instead of an emulator
 
@@ -84,6 +84,10 @@ python3 tools/play.py --game-files game_files
 The DXVK prefix must contain `include/dxvk` and `lib/libdxvk_d3d11.so`, `lib/libdxvk_dxgi.so`; the vkd3d prefix
 the headers and `lib/libvkd3d-shader.so.1`. Both travel next to the executable in `lib/`. Status: translation and
 build verified on Ubuntu 24.04 (Clang 18); gameplay on Linux not yet checked.
+
+## Build on macOS
+
+Experimental and not compiled or run yet: see [MACOS.md](MACOS.md).
 
 ## Keyboard controls
 
