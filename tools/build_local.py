@@ -167,6 +167,9 @@ def main():
         configure += ['-DDXMT_DIR=' + str(args.dxmt_dir.resolve()), '-DCMAKE_OSX_ARCHITECTURES=x86_64']
     run(configure, local, env)
     run([cmake, '--build', build, '--parallel', str(args.jobs), '--target', 'fifastreet_recomp'], local, env)
+    if os.name == 'nt':
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        __import__('fetch_pad_support').install(build, sdl3=True)
     print('Built privately in', build)
     print('Play with: python tools/play.py --game-files', game_files)
     print('Do not upload .local/, the generated code or the executable.')

@@ -44,6 +44,10 @@ default.xbe  5fabb5b763be0cc8823e814ee343ac5be6950305330f46c5170e08eaadea910b
 
 Do not upload the ISO, extracted files, generated code or the built executable.
 
+## Controllers
+
+Xbox pads use XInput. On Windows, `SDL3.dll` next to the executable adds every other pad SDL knows: DualShock 3/4, DualSense, Switch pads, USB adapters for PS2 and original Xbox pads. `tools/build_local.py` downloads it with `gamecontrollerdb.txt` (both zlib license); `tools/fetch_pad_support.py` does the same for a manual build. Without those files the port behaves as before. No PlayStation pad or adapter has been tried on real hardware yet.
+
 ## Build on Windows
 
 Requirements: Python 3.10+ (with `pip install -r requirements.txt`), Visual Studio 2022 Build Tools (C++ workload, Windows SDK), LLVM/Clang (`clang-cl`), CMake and Ninja.
