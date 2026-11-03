@@ -1,5 +1,12 @@
 Source kit only: no game, no XBE, no generated code and no executable. Bring your own original-Xbox USA disc.
 
+**v0.2.3**
+
+- **One-click `Setup.cmd`:** asks before installing anything, installs Python and Microsoft's C++ Build Tools through winget if missing, downloads pinned, SHA-256-checked LLVM/Clang, CMake and Ninja, and Capstone in a private Python environment, into `.local/tools` only, fetches missing parts, opens the game-file installer and builds the port; `Play-<game>.cmd` starts it. Run it again after a failure: finished steps are skipped.
+- **README:** a *How to play* guide for people new to this, and the same section layout as the other ports.
+
+`Setup.cmd` has not been tried from a fresh download with this game yet (only with FIFA Street 3). Please report problems with `setup-log.txt`.
+
 **v0.2.2**
 
 - **Every pad through SDL3:** PlayStation and generic controllers work in the game and in the F1 settings, not only Xbox pads.
